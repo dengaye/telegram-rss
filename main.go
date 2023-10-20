@@ -12,38 +12,45 @@ import (
 
 // 基础环境配置
 var BotToken *string
-var ChannelID *int64
+var WeeklyChannelID *int64
+var NewsChannelID *int64
+var BlogsChannelID *int64
 
 func TokenValid() {
-	if *BotToken == "" || *ChannelID == 0 {
-		panic("BotToken && ChannelID cannot be empty")
+	if *BotToken == "" || *WeeklyChannelID == 0 || *NewsChannelID == 0 || *BlogsChannelID == 0 {
+		panic("BotToken && ChannelId cannot be empty")
 	}
 }
 
 func init() {
 	BotToken = flag.String("tg_bot", "", "Telegram bot token")
-	ChannelID = flag.Int64("tg_channel", 0, "Telegram channel id")
+	WeeklyChannelID = flag.Int64("tg_weekly_channel", 0, "Telegram weekly channel id")
+	NewsChannelID = flag.Int64("tg_news_channel", 0, "Telegram news channel id")
+	BlogsChannelID = flag.Int64("tg_blogs_channel", 0, "Telegram blogs channel id")
 	flag.Parse()
 	TokenValid()
-	GetRssInfo()
+	getAllRssInfo()
 }
 
 // RSS 构成阶段
 type RSSInfos struct {
 	RssInfo []RssInfo `json:"rss_info"`
 }
+
 type RssInfo struct {
 	Title       string `json:"title"`
 	Url         string `json:"url"`
 	FullContent bool   `json:"full_content"`
 }
 
-var RssInfos = RSSInfos{nil}
+var WeeklyRssInfos = RSSInfos{nil}
+var NewsRssInfos = RSSInfos{nil}
+var BlogsRssInfos = RSSInfos{nil}
 
 // 从 配置文件中获取 rss 链接
 // 根据 rss 链接获取更新
-func GetRssInfo() {
-	rssFile, err := os.Open("./rss.json")
+func GetRssInfo(filePath string, RssInfos RSSInfos) {
+	rssFile, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
 	}
@@ -55,19 +62,31 @@ func GetRssInfo() {
 
 }
 
+func getAllRssInfo() {
+	GetRssInfo("./rss/weekly.json", WeeklyRssInfos);
+	GetRssInfo("./rss/news.json", NewsRssInfos);
+	GetRssInfo("./rss/blogs.json", BlogsRssInfos);
+}
+
+func GetAllPosts() {
+	GetPosts(WeeklyRssInfos, WeeklyChannelID)
+	GetPosts(NewsRssInfos, NewsChannelID)
+	GetPosts(BlogsRssInfos, BlogsChannelID)
+}
+
 // 根据时间筛选昨天一整天的文章
-func GetPosts() {
+func GetPosts(RssInfos RSSInfos, ChannelId *int64) {
 	var msg = make([]string, 0)
 	for _, info := range RssInfos.RssInfo {
 		msg = append(msg, GetPostInfo(info)...)
 	}
-	PushPost(msg)
+	PushPost(msg, ChannelId)
 }
 
 func GetPostInfo(rss RssInfo) []string {
 	var msg = make([]string, 0)
 	now := time.Now().UTC()
-	startTime := now.Add(-4 * time.Hour)
+	startTime := now.Add(-24 * time.Hour)
 	start := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), startTime.Hour(), 0, 0, 0, now.Location()).Unix()
 	end := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location()).Unix()
 
@@ -90,17 +109,17 @@ func GetPostInfo(rss RssInfo) []string {
 
 // 从配置文件获取推送方式
 // 使用对应的推送渠道推送文章
-func PushPost(msg []string) {
+func PushPost(msg []string, ChannelId *int64) {
 	bot, err := tgbotapi.NewBotAPI(*BotToken)
 	if err != nil {
 		panic(err)
 	}
 	for _, s := range msg {
-		_, _ = bot.Send(tgbotapi.NewMessage(*ChannelID, s))
+		_, _ = bot.Send(tgbotapi.NewMessage(*ChannelId, s))
 	}
 
 }
 
 func main() {
-	GetPosts()
+	GetAllPosts()
 }

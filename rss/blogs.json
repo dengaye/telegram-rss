@@ -1,18 +1,6 @@
 {
   "rss_info": [
     {
-      "title": "少数派",
-      "url": "https://sspai.com/feed"
-    },
-    {
-      "title": "阮一峰的网络日志",
-      "url": "http://feeds.feedburner.com/ruanyifeng"
-    },
-    {
-      "title": "酷壳 coolshell",
-      "url": "https://coolshell.cn/feed"
-    },
-    {
       "title": "依云's Blog",
       "url": "https://blog.lilydjwg.me/feed"
     },
@@ -23,14 +11,6 @@
     {
       "title": "Airing 的小屋",
       "url": "https://me.ursb.me/feed"
-    },
-    {
-      "title": "少数派 matrix",
-      "url": "https://rsshub.app/sspai/matrix"
-    },
-    {
-      "title": "Product Hunt",
-      "url": "https://www.producthunt.com/feed"
     },
     {
       "title": "贤民的比特回忆",
