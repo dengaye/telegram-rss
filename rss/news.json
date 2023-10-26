@@ -15,6 +15,14 @@
     {
       "title": "Product Hunt",
       "url": "https://www.producthunt.com/feed"
+    },
+    {
+      "title": "知乎每日精选",
+      "url": "http://www.zhihu.com/rss"
+    },
+    {
+      "title": "知乎日报",
+      "url": "https://feeds.feedburner.com/zhihu-daily"
     }
   ]
 }
