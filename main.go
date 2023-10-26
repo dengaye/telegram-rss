@@ -49,13 +49,14 @@ var BlogsRssInfos = RSSInfos{nil}
 
 // 从 配置文件中获取 rss 链接
 // 根据 rss 链接获取更新
-func GetRssInfo(filePath string, RssInfos RSSInfos) {
+func GetRssInfo(filePath string, RssInfos *RSSInfos) {
 	rssFile, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
 	}
 
-	err = json.NewDecoder(rssFile).Decode(&RssInfos)
+	err = json.NewDecoder(rssFile).Decode(RssInfos)
+	// fmt.Printf("RssInfos: %v\n", RssInfos.RssInfo)
 	if err != nil {
 		panic(err)
 	}
@@ -63,9 +64,9 @@ func GetRssInfo(filePath string, RssInfos RSSInfos) {
 }
 
 func getAllRssInfo() {
-	GetRssInfo("./rss/weekly.json", WeeklyRssInfos);
-	GetRssInfo("./rss/news.json", NewsRssInfos);
-	GetRssInfo("./rss/blogs.json", BlogsRssInfos);
+	GetRssInfo("./rss/weekly.json", &WeeklyRssInfos);
+	GetRssInfo("./rss/news.json", &NewsRssInfos);
+	GetRssInfo("./rss/blogs.json", &BlogsRssInfos);
 }
 
 func GetAllPosts() {
