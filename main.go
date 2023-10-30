@@ -56,7 +56,7 @@ func GetRssInfo(filePath string, RssInfos *RSSInfos) {
 	}
 
 	err = json.NewDecoder(rssFile).Decode(RssInfos)
-	// fmt.Printf("RssInfos: %v\n", RssInfos.RssInfo)
+	// fmt.Printf("RssInfos: %v\n", WeeklyRssInfos)
 	if err != nil {
 		panic(err)
 	}
@@ -77,11 +77,21 @@ func GetAllPosts() {
 
 // 根据时间筛选昨天一整天的文章
 func GetPosts(RssInfos RSSInfos, ChannelId *int64) {
+	// 
 	var msg = make([]string, 0)
 	for _, info := range RssInfos.RssInfo {
 		msg = append(msg, GetPostInfo(info)...)
 	}
 	PushPost(msg, ChannelId)
+}
+
+func getDatetime(times ...*time.Time) *time.Time {
+	for _, d := range times {
+		if d != nil && !d.IsZero() {
+			return d
+		}
+	}
+	return times[len(times)-1]
 }
 
 func GetPostInfo(rss RssInfo) []string {
@@ -97,7 +107,8 @@ func GetPostInfo(rss RssInfo) []string {
 		fmt.Print(err.Error())
 	} else {
 		for _, item := range feed.Items {
-			if item.PublishedParsed != nil && item.PublishedParsed.Unix() >= start && item.PublishedParsed.Unix() < end {
+			parseDatetime := getDatetime(item.PublishedParsed, item.UpdatedParsed)
+			if parseDatetime != nil && parseDatetime.Unix() >= start && parseDatetime.Unix() < end {
 				msgItem := fmt.Sprintln(item.Title, item.Link)
 				msg = append(msg, msgItem)
 
@@ -115,8 +126,12 @@ func PushPost(msg []string, ChannelId *int64) {
 	if err != nil {
 		panic(err)
 	}
+	bot.Debug = true
 	for _, s := range msg {
-		_, _ = bot.Send(tgbotapi.NewMessage(*ChannelId, s))
+		_, err = bot.Send(tgbotapi.NewMessage(*ChannelId, s))
+		if err != nil {
+			panic(err)
+		}
 	}
 
 }
