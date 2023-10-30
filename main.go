@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/mmcdole/gofeed"
 	"os"
 	"time"
@@ -128,12 +128,11 @@ func PushPost(msg []string, ChannelId *int64) {
 	}
 	bot.Debug = true
 	for _, s := range msg {
-		_, err = bot.Send(tgbotapi.NewMessage(*ChannelId, s))
+		_, err = bot.Send(tgbotapi.NewMessage(*ChannelId, "test"))
 		if err != nil {
 			panic(err)
 		}
 	}
-
 }
 
 func main() {
