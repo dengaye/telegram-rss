@@ -128,7 +128,7 @@ func PushPost(msg []string, ChannelId *int64) {
 	}
 	bot.Debug = true
 	for _, s := range msg {
-		_, err = bot.Send(tgbotapi.NewMessage(*ChannelId, "test"))
+		_, err = bot.Send(tgbotapi.NewMessage(*ChannelId, s))
 		if err != nil {
 			panic(err)
 		}
