@@ -8,6 +8,7 @@ import (
 	"github.com/mmcdole/gofeed"
 	"os"
 	"time"
+	"sync"
 )
 
 // 基础环境配置
@@ -64,15 +65,52 @@ func GetRssInfo(filePath string, RssInfos *RSSInfos) {
 }
 
 func getAllRssInfo() {
-	GetRssInfo("./rss/weekly.json", &WeeklyRssInfos);
-	GetRssInfo("./rss/news.json", &NewsRssInfos);
-	GetRssInfo("./rss/blogs.json", &BlogsRssInfos);
+	var wg sync.WaitGroup
+
+	// 设置 WaitGroup 的计数器为 3，因为我们有 3 个并发任务
+	wg.Add(3)
+
+	go func() {
+		GetRssInfo("./rss/weekly.json", &WeeklyRssInfos)
+		wg.Done()
+	}()
+
+	go func() {
+		GetRssInfo("./rss/news.json", &NewsRssInfos)
+		wg.Done()
+	}()
+
+	go func() {
+		GetRssInfo("./rss/blogs.json", &BlogsRssInfos)
+		wg.Done()
+	}()
+
+	// 等待所有任务完成
+	wg.Wait()
 }
 
 func GetAllPosts() {
-	GetPosts(WeeklyRssInfos, WeeklyChannelID)
-	GetPosts(NewsRssInfos, NewsChannelID)
-	GetPosts(BlogsRssInfos, BlogsChannelID)
+	var wg sync.WaitGroup
+
+	wg.Add(3) // 设置 WaitGroup 的计数器为 3，因为我们有 3 个并发任务
+
+	go func() {
+		GetPosts(WeeklyRssInfos, WeeklyChannelID)
+		// 当任务完成时，调用 Done 方法减少 WaitGroup 的计数器
+		wg.Done() 
+	}()
+
+	go func() {
+		GetPosts(NewsRssInfos, NewsChannelID)
+		wg.Done()
+	}()
+
+	go func() {
+		GetPosts(BlogsRssInfos, BlogsChannelID)
+		wg.Done()
+	}()
+
+	wg.Wait() // 等待所有任务完成
 }
 
 // 根据时间筛选昨天一整天的文章
@@ -97,7 +135,7 @@ func getDatetime(times ...*time.Time) *time.Time {
 func GetPostInfo(rss RssInfo) []string {
 	var msg = make([]string, 0)
 	now := time.Now().UTC()
-	startTime := now.Add(-24 * time.Hour)
+	startTime := now.Add(-8 * time.Hour)
 	start := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), startTime.Hour(), 0, 0, 0, now.Location()).Unix()
 	end := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location()).Unix()
 
