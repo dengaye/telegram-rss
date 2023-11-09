@@ -1,0 +1,28 @@
+{
+  "rss_info": [
+    {
+      "title": "少数派",
+      "url": "https://sspai.com/feed"
+    },
+    {
+      "title": "酷壳 coolshell",
+      "url": "https://coolshell.cn/feed"
+    },
+    {
+      "title": "少数派 matrix",
+      "url": "https://rsshub.app/sspai/matrix"
+    },
+    {
+      "title": "Product Hunt",
+      "url": "https://www.producthunt.com/feed"
+    },
+    {
+      "title": "知乎每日精选",
+      "url": "http://www.zhihu.com/rss"
+    },
+    {
+      "title": "知乎日报",
+      "url": "https://feeds.feedburner.com/zhihu-daily"
+    }
+  ]
+}
