@@ -30,7 +30,6 @@ func init() {
 	BlogsChannelID = flag.Int64("tg_blogs_channel", 0, "Telegram blogs channel id")
 	flag.Parse()
 	TokenValid()
-	getAllRssInfo()
 }
 
 // RSS 构成阶段
@@ -49,43 +48,45 @@ var NewsRssInfos = RSSInfos{nil}
 var BlogsRssInfos = RSSInfos{nil}
 
 // 从 配置文件中获取 rss 链接
-// 根据 rss 链接获取更新
-func GetRssInfo(filePath string, RssInfos *RSSInfos) {
+func GetRssInfo(filePath string, RssInfos *RSSInfos) error {
 	rssFile, err := os.Open(filePath)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("打开文件失败: %v", err)
 	}
+	defer rssFile.Close()
 
 	err = json.NewDecoder(rssFile).Decode(RssInfos)
-	// fmt.Printf("RssInfos: %v\n", WeeklyRssInfos)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("解析JSON失败: %v", err)
 	}
-
+	return nil
 }
 
 func getAllRssInfo() {
 	var wg sync.WaitGroup
-
-	// 设置 WaitGroup 的计数器为 3，因为我们有 3 个并发任务
 	wg.Add(3)
 
 	go func() {
-		GetRssInfo("./rss/weekly.json", &WeeklyRssInfos)
-		wg.Done()
+		defer wg.Done()
+		if err := GetRssInfo("./rss/weekly.json", &WeeklyRssInfos); err != nil {
+			fmt.Printf("获取weekly RSS信息失败: %v\n", err)
+		}
 	}()
 
 	go func() {
-		GetRssInfo("./rss/news.json", &NewsRssInfos)
-		wg.Done()
+		defer wg.Done()
+		if err := GetRssInfo("./rss/news.json", &NewsRssInfos); err != nil {
+			fmt.Printf("获取news RSS信息失败: %v\n", err)
+		}
 	}()
 
 	go func() {
-		GetRssInfo("./rss/blogs.json", &BlogsRssInfos)
-		wg.Done()
+		defer wg.Done()
+		if err := GetRssInfo("./rss/blogs.json", &BlogsRssInfos); err != nil {
+			fmt.Printf("获取blogs RSS信息失败: %v\n", err)
+		}
 	}()
 
-	// 等待所有任务完成
 	wg.Wait()
 }
 
@@ -134,23 +135,37 @@ func getDatetime(times ...*time.Time) *time.Time {
 
 func GetPostInfo(rss RssInfo) []string {
 	var msg = make([]string, 0)
-	now := time.Now().UTC()
-	startTime := now.Add(-8 * time.Hour)
-	start := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), startTime.Hour(), 0, 0, 0, now.Location()).Unix()
-	end := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location()).Unix()
+	now := time.Now()
+	// 获取最近24小时的更新
+	oneDayAgo := now.Add(-24 * time.Hour)
 
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(rss.Url)
 	if err != nil {
-		fmt.Print(err.Error())
-	} else {
-		for _, item := range feed.Items {
-			parseDatetime := getDatetime(item.PublishedParsed, item.UpdatedParsed)
-			if parseDatetime != nil && parseDatetime.Unix() >= start && parseDatetime.Unix() < end {
-				msgItem := fmt.Sprintln(item.Title, item.Link)
-				msg = append(msg, msgItem)
+		fmt.Printf("解析 RSS 失败 [%s]: %v\n", rss.Title, err)
+		return msg
+	}
 
+	for _, item := range feed.Items {
+		parseDatetime := getDatetime(item.PublishedParsed, item.UpdatedParsed)
+		if parseDatetime == nil {
+			continue
+		}
+
+		// 获取最近24小时的更新
+		if parseDatetime.After(oneDayAgo) && parseDatetime.Before(now) {
+			var msgItem string
+			if rss.FullContent && item.Description != "" {
+				msgItem = fmt.Sprintf("*%s*\n%s\n\n%s", 
+					item.Title, 
+					item.Description,
+					item.Link)
+			} else {
+				msgItem = fmt.Sprintf("*%s*\n%s", 
+					item.Title,
+					item.Link)
 			}
+			msg = append(msg, msgItem)
 		}
 	}
 
@@ -160,19 +175,42 @@ func GetPostInfo(rss RssInfo) []string {
 // 从配置文件获取推送方式
 // 使用对应的推送渠道推送文章
 func PushPost(msg []string, ChannelId *int64) {
+	if len(msg) == 0 {
+		return
+	}
+
 	bot, err := tgbotapi.NewBotAPI(*BotToken)
 	if err != nil {
-		panic(err)
+		fmt.Printf("创建 Bot 失败: %v\n", err)
+		return
 	}
-	bot.Debug = true
+
+	bot.Debug = false
+	
 	for _, s := range msg {
-		_, err = bot.Send(tgbotapi.NewMessage(*ChannelId, s))
-		if err != nil {
-			panic(err)
+		message := tgbotapi.NewMessage(*ChannelId, s)
+		message.ParseMode = "Markdown"
+		
+		// 添加重试机制
+		maxRetries := 3
+		for i := 0; i < maxRetries; i++ {
+			_, err = bot.Send(message)
+			if err == nil {
+				break
+			}
+			
+			fmt.Printf("发送消息失败 (尝试 %d/%d): %v\n", i+1, maxRetries, err)
+			if i < maxRetries-1 {
+				time.Sleep(time.Second * 3)
+			}
 		}
 	}
 }
 
 func main() {
+	fmt.Printf("开始执行任务: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	
+	getAllRssInfo()
 	GetAllPosts()
+	fmt.Println("任务执行完成")
 }

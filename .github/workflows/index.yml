@@ -2,9 +2,7 @@ name: RSS TELEGRAM
 on: 
   workflow_dispatch:
   schedule:
-    - cron: '0 */4 * * *'
-#env:
-#  TZ: Asia/Shanghai
+    - cron: '0 0 * * *'
 
 jobs:
     search-and-push:
